@@ -48,7 +48,7 @@ public class RDBReader implements BaseJsonReader {
         
 		int count = root.getInt("count");
 		if(count != itemsSize){
-			throw new GdxRuntimeException("entries count mismatch");
+			throw new GdxRuntimeException("entries count mismatch : found=" + itemsSize + ", count=" + count);
 		}
 		if(buffer.hasRemaining()){
 			throw new GdxRuntimeException("EOF expected");
@@ -123,12 +123,20 @@ public class RDBReader implements BaseJsonReader {
 		}
 		else if(fieldToken == 0xcd){
 			// size 16 bits
-			int num = buffer.getShort();
+			int num = buffer.getShort() & 0xFFFF;
 			return new JsonValue(num); 
 		}
 		else if(fieldToken == 0xce){
 			// size 32 bits
-			int num = buffer.getInt();
+			long num = buffer.getInt() & 0xFFFFFFFFL;
+			return new JsonValue(num); 
+		}
+		else if(fieldToken == 0xcf){
+			// size 64 bits TODO unsigned ?
+			long num = buffer.getLong();
+			if(num < 0){ 
+				throw new GdxRuntimeException("64 bits unsigned integer not supported");
+			}
 			return new JsonValue(num); 
 		}
 		else if(fieldToken == 0xcc){
@@ -139,11 +147,18 @@ public class RDBReader implements BaseJsonReader {
 		else if((fieldToken & 0xa0) == 0xa0){
 			int fieldNameSize = fieldToken & 0x1F;
 			return new JsonValue(parseString(buffer, fieldNameSize));
-		}else if((fieldToken & 0xd9) == 0xd9){
-			int fieldNameSize = buffer.get() & 0xFF;
+		}else if((fieldToken & 0xd0) == 0xd0){
+			int fieldNameSize;
+			if(fieldToken == 0xd9){
+				fieldNameSize = buffer.get() & 0xFF;
+			}else if(fieldToken == 0xda){
+				fieldNameSize = buffer.getShort() & 0xFFFF;
+			}else{
+				throw new GdxRuntimeException("unknow string subtype " + String.format("%x", fieldToken));
+			}
 			return new JsonValue(parseString(buffer, fieldNameSize));
 		}else{
-			throw new GdxRuntimeException("unknow value type " + fieldToken);
+			throw new GdxRuntimeException("unknow value type " + String.format("%x", fieldToken));
 		}
 	}
 

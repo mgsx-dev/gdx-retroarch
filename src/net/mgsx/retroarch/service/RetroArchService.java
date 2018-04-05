@@ -2,6 +2,7 @@ package net.mgsx.retroarch.service;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Scanner;
 
 import com.badlogic.gdx.files.FileHandle;
@@ -10,6 +11,8 @@ import com.badlogic.gdx.utils.ObjectMap;
 
 import net.mgsx.retroarch.service.db.RetroArchDatabase;
 import net.mgsx.retroarch.service.db.RetroArchItem;
+import net.mgsx.retroarch.service.model.RetroArchMachine;
+import net.mgsx.retroarch.service.model.RetroArchRun;
 
 public class RetroArchService {
 
@@ -17,6 +20,13 @@ public class RetroArchService {
 	public static RetroArchService i(){
 		return i== null ? i = new RetroArchService() : i;
 	}
+	
+	private Comparator<RetroArchItem> itemNameComparator = new Comparator<RetroArchItem>() {
+		@Override
+		public int compare(RetroArchItem o1, RetroArchItem o2) {
+			return o1.name.compareTo(o2.name);
+		}
+	};
 	
 	private ObjectMap<String, RetroArchRun> runByPath = new ObjectMap<String, RetroArchRun>();
 	private ObjectMap<String, Array<RetroArchItem>> dbByCore = new ObjectMap<String, Array<RetroArchItem>>();
@@ -31,6 +41,9 @@ public class RetroArchService {
 	
 	public static FileHandle getDatabaseFolder(){
 		return getRootFolder().child("database").child("rdb");
+	}
+	public static FileHandle getDatabaseFile(String name) {
+		return getDatabaseFolder().child(name + ".rdb");
 	}
 	
 	public Array<RetroArchRun> getHistory(){
@@ -50,33 +63,57 @@ public class RetroArchService {
 		
 	}
 	
-	public FileHandle getPicture(RetroArchRun run){
-		
-		RetroArchRun runPlay = runByPath.get(run.romPath);
-		// TODO more replacements
-		String renamed = runPlay.romName.replaceAll("\\(J\\)", "(Japan)");
-		String playList = new FileHandle(runPlay.playlist).nameWithoutExtension();
-		FileHandle pict = getRootFolder().child("thumbnails").child(playList).child("Named_Boxarts").child(renamed + ".png");
-		
-		Array<RetroArchItem> db = dbByCore.get(playList);
+	public Array<RetroArchMachine> getAllMachines(){
+		Array<RetroArchMachine> items = new Array<RetroArchMachine>();
+		for(FileHandle file : getDatabaseFolder().list(".rdb")){
+			RetroArchMachine item = new RetroArchMachine();
+			item.name = file.nameWithoutExtension();
+			items.add(item);
+		}
+		items.sort();
+		return items;
+	}
+	
+	public Array<RetroArchItem> getGameList(RetroArchMachine machine) {
+		return getGameList(machine.name);
+	}
+	public Array<RetroArchItem> getGameList(String coreName) {
+		Array<RetroArchItem> db = dbByCore.get(coreName);
 		if(db == null){
 			try {
-				db = new RetroArchDatabase().load(getDatabaseFolder().child(playList + ".rdb"));
-				dbByCore.put(playList, db);
+				db = new RetroArchDatabase().load(getDatabaseFolder().child(coreName + ".rdb"));
+				dbByCore.put(coreName, db);
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
-		if(db != null){
-			String crc = runPlay.crc.split("\\|")[0].toLowerCase();
-			for(RetroArchItem item : db){
-				if(item.crc.equals(crc)){
-					System.out.println(item.rom_name);
-					break;
-				}
-			}
-		}
+		db.sort(itemNameComparator);
+		return db;
+	}
+	
+	public FileHandle getPicture(RetroArchItem item){
+		return getPicture(item.machine, item.name);
+	}
+	public FileHandle getPicture(RetroArchRun run){
+		RetroArchRun runPlay = runByPath.get(run.romPath);
+		return getPicture(new FileHandle(runPlay.playlist).nameWithoutExtension(), runPlay.romName);
+	}
+	public FileHandle getPicture(String machineName, String romName){
+		
+		// TODO more replacements
+		String renamed = romName.replaceAll("\\(J\\)", "(Japan)");
+		FileHandle pict = getRootFolder().child("thumbnails").child(machineName).child("Named_Boxarts").child(renamed + ".png");
+		
+//		Array<RetroArchItem> db = getGameList(machineName);
+//		if(db != null){
+//			String crc = runPlay.crc.split("\\|")[0].toLowerCase();
+//			for(RetroArchItem item : db){
+//				if(item.crc.equals(crc)){
+//					System.out.println(item.rom_name);
+//					break;
+//				}
+//			}
+//		}
 		
 		if(!pict.exists()) return null;
 		return pict;
@@ -119,5 +156,6 @@ public class RetroArchService {
 		}
 		
 	}
-	
+
+
 }

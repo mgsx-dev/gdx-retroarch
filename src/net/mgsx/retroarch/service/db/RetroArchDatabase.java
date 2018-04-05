@@ -12,6 +12,11 @@ public class RetroArchDatabase {
 	public Array<RetroArchItem> load(FileHandle file) throws FileNotFoundException
 	{
 		JsonValue value = new RDBReader().parse(file);
-		return new Json().readValue(Array.class, RetroArchItem.class, value);
+		Array<RetroArchItem> items = new Json().readValue(Array.class, RetroArchItem.class, value);
+		String machineName = file.nameWithoutExtension();
+		for(RetroArchItem item : items){
+			item.machine = machineName ;
+		}
+		return items;
 	}
 }

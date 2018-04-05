@@ -1,4 +1,4 @@
-package net.mgsx.retroarch.service;
+package net.mgsx.retroarch.service.model;
 
 import com.badlogic.gdx.files.FileHandle;
 
