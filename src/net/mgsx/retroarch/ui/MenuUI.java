@@ -43,7 +43,10 @@ public class MenuUI extends Table
 		gameList.setItems(RetroArchService.i().getHistory());
 		
 		TextButton btRun;
-		add(btRun = new TextButton("Run", skin)).row();
+		add(btRun = new TextButton("Run Game", skin));
+		
+		TextButton btRunApp;
+		add(btRunApp = new TextButton("Run Retroarch", skin)).row();
 		
 		cover = new Image();
 		cover.setScaling(Scaling.fit);
@@ -70,6 +73,14 @@ public class MenuUI extends Table
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				RetroArchService.i().run(gameList.getSelected());
+			}
+		});
+		
+		btRunApp.addListener(new ChangeListener() {
+			
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				RetroArchService.i().run();
 			}
 		});
 		

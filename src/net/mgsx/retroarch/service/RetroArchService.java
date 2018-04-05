@@ -8,6 +8,7 @@ import java.util.Scanner;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
+import com.badlogic.gdx.utils.ObjectMap.Entry;
 
 import net.mgsx.retroarch.service.db.RetroArchDatabase;
 import net.mgsx.retroarch.service.db.RetroArchItem;
@@ -72,6 +73,23 @@ public class RetroArchService {
 		}
 		items.sort();
 		return items;
+	}
+	
+	public Array<String> getMachineVendors(){
+		Array<String> vendors = new Array<String>();
+		Array<RetroArchMachine> machines = getAllMachines();
+		ObjectMap<String, Array<RetroArchMachine>> map = new ObjectMap<String, Array<RetroArchMachine>>();
+		for(RetroArchMachine machine : machines){
+			String vendor = machine.name.split(" - ", 2)[0];
+			Array<RetroArchMachine> vendorMachines = map.get(vendor);
+			if(vendorMachines == null) map.put(vendor, vendorMachines = new Array<RetroArchMachine>());
+			vendorMachines.add(machine);
+		}
+		for(Entry<String, Array<RetroArchMachine>> entry : map){
+			vendors.add(entry.key);
+		}
+		vendors.sort();
+		return vendors;
 	}
 	
 	public Array<RetroArchItem> getGameList(RetroArchMachine machine) {
@@ -143,8 +161,22 @@ public class RetroArchService {
 	public void run(RetroArchRun run) 
 	{
 		// TODO fullscreen option
+		runRetroArch("-f", "-v", "-L", run.corePath, run.romPath);
+	}
+	
+	public void run() {
+		runRetroArch();
+	}
+	
+	private void runRetroArch(String...args) {
+		// TODO Auto-generated method stub
+		String [] command = new String[args.length+1];
+		for(int i=0 ; i<args.length ; i++){
+			command[i+1] = args[i];
+		}
+		command[0] = "retroarch";
 		try {
-			Process proc = new ProcessBuilder("retroarch", "-f", "-v", "-L", run.corePath, run.romPath)
+			Process proc = new ProcessBuilder(command)
 					.inheritIO()
 					.start();
 			proc.waitFor();
@@ -156,6 +188,5 @@ public class RetroArchService {
 		}
 		
 	}
-
 
 }
